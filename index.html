@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音频转文字 - 在线转换工具</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- GSAP 动画库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <!-- 统一的 Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1e40af',
+                        secondary: '#3b82f6',
+                        accent: '#f97316',
+                        dark: '#1e293b',
+                        light: '#f8fafc'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .transition-all-300 {
+                transition: all 300ms ease-in-out;
+            }
+            .upload-area-active {
+                @apply border-accent bg-blue-50;
+            }
+            .progress-bar {
+                transition: width 0.3s ease;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+    <!-- 导航栏 -->
+    <header class="bg-white shadow-sm">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fa fa-music text-primary text-2xl"></i>
+                <h1 class="text-xl font-bold text-primary">音频转文字</h1>
+            </div>
+            <nav>
+                <ul class="flex space-x-6">
+                    <li><a href="#" class="text-gray-700 hover:text-primary transition-all-300">首页</a></li>
+                    <li><a href="#how-it-works" class="text-gray-700 hover:text-primary transition-all-300">使用方法</a></li>
+                    <li><a href="#supported-formats" class="text-gray-700 hover:text-primary transition-all-300">支持格式</a></li>
+                    <li><a href="#faq" class="text-gray-700 hover:text-primary transition-all-300">常见问题</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- 主要内容 -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- 英雄区域 -->
+        <section class="text-center py-12">
+            <h2 class="text-4xl font-bold text-dark mb-4 text-shadow">简单高效的音频转文字工具</h2>
+            <p class="text-xl text-gray-600 max-w-3xl mx-auto mb-8">上传您的音频文件，我们将帮您快速转换为可编辑的文字内容，支持多种音频格式，最大支持50MB文件</p>
+            <div class="flex justify-center">
+                <img src="https://p11-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/120f608f1f624aa792424d277f9940c2~tplv-a9rns2rl98-image.image?lk3s=8e244e95&rcl=20260327210719F0E9B81D6E2E31275B7A&rrcfp=f06b921b&x-expires=1777208860&x-signature=018pEXo28Mqe%2Ba%2BhKXe3P2UB6Ng%3D" 
+                     alt="音频波形图" 
+                     class="w-full max-w-2xl rounded-lg shadow-lg">
+            </div>
+        </section>
+
+        <!-- 上传区域 -->
+        <section class="max-w-3xl mx-auto bg-white rounded-xl shadow-lg p-8 mb-12">
+            <div id="upload-container" class="text-center">
+                <div id="upload-area" class="border-2 border-dashed border-gray-300 rounded-lg p-8 cursor-pointer hover:border-primary transition-all-300">
+                    <img src="https://p6-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/d3856364e4d14fc990b0df7435b7caa3~tplv-a9rns2rl98-image.image?lk3s=8e244e95&rcl=20260327210719F0E9B81D6E2E31275B7A&rrcfp=f06b921b&x-expires=1777208857&x-signature=tM9qVv567c03aeCyn8gMtR1jwbc%3D" 
+                         alt="上传图标" 
+                         class="w-24 h-24 mx-auto mb-4">
+                    <h3 class="text-xl font-semibold text-gray-700 mb-2">点击或拖拽文件到此处上传</h3>
+                    <p class="text-gray-500 mb-4">支持 MP3, WAV, M4A 等格式，单个文件最大 50MB</p>
+                    <button id="upload-btn" class="bg-primary hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-full transition-all-300">
+                        选择文件
+                    </button>
+                    <input type="file" id="file-input" class="hidden" accept="audio/*">
+                </div>
+            </div>
+
+            <!-- 文件信息区域 -->
+            <div id="file-info" class="hidden mt-6">
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div class="flex items-center">
+                        <i class="fa fa-file-audio-o text-primary text-2xl mr-3"></i>
+                        <div>
+                            <p id="file-name" class="font-medium text-gray-800 truncate max-w-xs"></p>
+                            <p id="file-size" class="text-sm text-gray-500"></p>
+                        </div>
+                    </div>
+                    <button id="remove-file" class="text-red-500 hover:text-red-700 transition-all-300">
+                        <i class="fa fa-times-circle text-xl"></i>
+                    </button>
+                </div>
+                
+                <!-- 音频播放器 -->
+                <div id="audio-player-container" class="mt-4 hidden">
+                    <audio id="audio-player" controls class="w-full">
+                        您的浏览器不支持音频播放。
+                    </audio>
+                </div>
+
+                <!-- 转换按钮 -->
+                <div class="mt-6 text-center">
+                    <button id="convert-btn" class="bg-accent hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-full transition-all-300 shadow-md hover:shadow-lg">
+                        开始转换
+                    </button>
+                </div>
+            </div>
+
+            <!-- 进度显示区域 -->
+            <div id="progress-container" class="hidden mt-6">
+                <h3 class="text-lg font-semibold text-gray-700 mb-3">转换进度</h3>
+                <div class="w-full bg-gray-200 rounded-full h-4 mb-2">
+                    <div id="progress-bar" class="bg-primary h-4 rounded-full progress-bar" style="width: 0%"></div>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span id="progress-text" class="text-gray-600">准备中...</span>
+                    <span id="progress-percentage" class="font-medium text-primary">0%</span>
+                </div>
+                <div id="processing-steps" class="mt-4 space-y-2">
+                    <div class="flex items-center">
+                        <div class="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-xs mr-2">1</div>
+                        <span class="text-gray-600">上传文件</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-xs mr-2">2</div>
+                        <span class="text-gray-600">音频处理</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-xs mr-2">3</div>
+                        <span class="text-gray-600">语音识别</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-xs mr-2">4</div>
+                        <span class="text-gray-600">生成文本</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 结果区域 -->
+            <div id="result-container" class="hidden mt-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-semibold text-gray-800">转换结果</h3>
+                    <div class="flex space-x-2">
+                        <button id="copy-result" class="flex items-center px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-all-300">
+                            <i class="fa fa-copy mr-1"></i> 复制
+                        </button>
+                        <button id="download-txt" class="flex items-center px-3 py-1 bg-primary hover:bg-blue-700 text-white rounded-md transition-all-300">
+                            <i class="fa fa-download mr-1"></i> TXT
+                        </button>
+                        <button id="download-docx" class="flex items-center px-3 py-1 bg-primary hover:bg-blue-700 text-white rounded-md transition-all-300">
+                            <i class="fa fa-download mr-1"></i> DOCX
+                        </button>
+                    </div>
+                </div>
+                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                    <div id="result-text" class="whitespace-pre-wrap text-gray-800 min-h-[200px] max-h-[400px] overflow-y-auto p-2"></div>
+                </div>
+                <div class="mt-6 text-center">
+                    <button id="new-conversion" class="bg-primary hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-full transition-all-300">
+                        开始新转换
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 使用方法 -->
+        <section id="how-it-works" class="max-w-4xl mx-auto mb-16">
+            <h2 class="text-3xl font-bold text-center text-dark mb-10">使用方法</h2>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-upload text-primary text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">上传音频文件</h3>
+                    <p class="text-gray-600">点击上传按钮或直接拖拽音频文件到上传区域，支持MP3、WAV、M4A等常见格式</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-cogs text-primary text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">自动转换</h3>
+                    <p class="text-gray-600">点击"开始转换"按钮，系统将自动处理您的音频文件并转换为文字</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-download text-primary text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">下载结果</h3>
+                    <p class="text-gray-600">转换完成后，您可以在线预览、复制或下载转换后的文字内容</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 支持格式 -->
+        <section id="supported-formats" class="max-w-4xl mx-auto mb-16">
+            <h2 class="text-3xl font-bold text-center text-dark mb-10">支持的音频格式</h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold mb-4 flex items-center">
+                        <i class="fa fa-file-audio-o text-primary mr-2"></i>
+                        常见音频格式
+                    </h3>
+                    <ul class="space-y-2 text-gray-700">
+                        <li class="flex items-center">
+                            <i class="fa fa-check-circle text-green-500 mr-2"></i>
+                            <span class="font-medium">MP3</span>
+                            <span class="text-gray-500 text-sm ml-2">- 最常用的音频格式</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fa fa-check-circle text-green-500 mr-2"></i>
+                            <span class="font-medium">WAV</span>
+                            <span class="text-gray-500 text-sm ml-2">- 无损音频格式</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fa fa-check-circle text-green-500 mr-2"></i>
+                            <span class="font-medium">M4A</span>
+                            <span class="text-gray-500 text-sm ml-2">- Apple音频格式</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fa fa-check-circle text-green-500 mr-2"></i>
+                            <span class="font-medium">OGG</span>
+                            <span class="text-gray-500 text-sm ml-2">- 开源音频格式</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fa fa-check-circle text-green-500 mr-2"></i>
+                            <span class="font-medium">FLAC</span>
+                            <span class="text-gray-500 text-sm ml-2">- 无损压缩音频</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold mb-4 flex items-center">
+                        <i class="fa fa-info-circle text-primary mr-2"></i>
+                        转换限制
+                    </h3>
+                    <ul class="space-y-3 text-gray-700">
+                        <li class="flex items-start">
+                            <i class="fa fa-exclamation-circle text-orange-500 mr-2 mt-1"></i>
+                            <div>
+                                <span class="font-medium">文件大小限制</span>
+                                <p class="text-gray-500 text-sm">单个文件最大支持50MB</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa fa-exclamation-circle text-orange-500 mr-2 mt-1"></i>
+                            <div>
+                                <span class="font-medium">转换时间</span>
+                                <p class="text-gray-500 text-sm">根据音频长度和复杂度，转换时间通常为音频长度的1-2倍</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa fa-exclamation-circle text-orange-500 mr-2 mt-1"></i>
+                            <div>
+                                <span class="font-medium">语言支持</span>
+                                <p class="text-gray-500 text-sm">目前支持中文、英文等常见语言的语音识别</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 常见问题 -->
+        <section id="faq" class="max-w-3xl mx-auto mb-16">
+            <h2 class="text-3xl font-bold text-center text-dark mb-10">常见问题</h2>
+            <div class="space-y-4">
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <button class="faq-question w-full flex justify-between items-center p-4 text-left font-medium text-gray-800 hover:bg-gray-50 transition-all-300">
+                        <span>转换后的文字准确率如何？</span>
+                        <i class="fa fa-chevron-down text-gray-500 transition-transform"></i>
+                    </button>
+                    <div class="faq-answer hidden px-4 pb-4 text-gray-600">
+                        <p>我们使用先进的语音识别技术，在清晰的音频和标准口音情况下，准确率可达90%以上。但对于背景噪音较大、口音较重或专业术语较多的音频，准确率可能会有所下降。</p>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <button class="faq-question w-full flex justify-between items-center p-4 text-left font-medium text-gray-800 hover:bg-gray-50 transition-all-300">
+                        <span>转换后的文件会保存多久？</span>
+                        <i class="fa fa-chevron-down text-gray-500 transition-transform"></i>
+                    </button>
+                    <div class="faq-answer hidden px-4 pb-4 text-gray-600">
+                        <p>为保护您的隐私，转换后的文件仅在服务器上保存24小时，24小时后会自动删除。我们建议您及时下载并保存转换结果。</p>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <button class="faq-question w-full flex justify-between items-center p-4 text-left font-medium text-gray-800 hover:bg-gray-50 transition-all-300">
+                        <span>是否支持批量转换多个文件？</span>
+                        <i class="fa fa-chevron-down text-gray-500 transition-transform"></i>
+                    </button>
+                    <div class="faq-answer hidden px-4 pb-4 text-gray-600">
+                        <p>目前我们的在线工具仅支持单文件转换。如果您需要批量转换多个文件，可以完成一个文件后继续上传下一个文件，或者考虑使用我们的API服务进行批量处理。</p>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <button class="faq-question w-full flex justify-between items-center p-4 text-left font-medium text-gray-800 hover:bg-gray-50 transition-all-300">
+                        <span>如何提高转换准确率？</span>
+                        <i class="fa fa-chevron-down text-gray-500 transition-transform"></i>
+                    </button>
+                    <div class="faq-answer hidden px-4 pb-4 text-gray-600">
+                        <p>为提高转换准确率，建议您提供清晰无噪音的音频文件，尽量使用标准口音，并确保音频中没有过多的背景噪音或干扰声音。对于专业术语较多的内容，可以在上传前提供相关词汇列表以提高识别准确率。</p>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <button class="faq-question w-full flex justify-between items-center p-4 text-left font-medium text-gray-800 hover:bg-gray-50 transition-all-300">
+                        <span>转换服务是否收费？</span>
+                        <i class="fa fa-chevron-down text-gray-500 transition-transform"></i>
+                    </button>
+                    <div class="faq-answer hidden px-4 pb-4 text-gray-600">
+                        <p>我们提供基础的免费转换服务，每个用户每天可以免费转换最多3个文件，每个文件不超过50MB。对于更多的转换需求，我们提供付费套餐，您可以在转换页面查看详细的价格信息。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-dark text-white py-10">
+        <div class="container mx-auto px-4">
+            <div class="grid md:grid-cols-4 gap-8">
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">音频转文字</h3>
+                    <p class="text-gray-400">简单高效的在线音频转文字工具，支持多种音频格式，快速获取文字内容。</p>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">快速链接</h3>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="#" class="hover:text-white transition-all-300">首页</a></li>
+                        <li><a href="#how-it-works" class="hover:text-white transition-all-300">使用方法</a></li>
+                        <li><a href="#supported-formats" class="hover:text-white transition-all-300">支持格式</a></li>
+                        <li><a href="#faq" class="hover:text-white transition-all-300">常见问题</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">联系我们</h3>
+                    <ul class="space-y-2 text-gray-400">
+                        <li class="flex items-center">
+                            <i class="fa fa-envelope-o mr-2"></i>
+                            <a href="mailto:support@audiototext.com" class="hover:text-white transition-all-300">support@audiototext.com</a>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fa fa-phone mr-2"></i>
+                            <span>400-123-4567</span>
+                        </li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">关注我们</h3>
+                    <div class="flex space-x-4">
+                        <a href="#" class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center hover:bg-primary transition-all-300">
+                            <i class="fa fa-weixin text-white"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center hover:bg-primary transition-all-300">
+                            <i class="fa fa-weibo text-white"></i>
+                        </a>
+                        <a href="#" class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center hover:bg-primary transition-all-300">
+                            <i class="fa fa-github text-white"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
+                <p>&copy; 2025 音频转文字 - 在线转换工具. 保留所有权利.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 成功提示弹窗 -->
+    <div id="success-toast" class="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 flex items-center">
+        <i class="fa fa-check-circle mr-2"></i>
+        <span id="toast-message">操作成功</span>
+    </div>
+
+    <script>
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取DOM元素
+            const uploadArea = document.getElementById('upload-area');
+            const fileInput = document.getElementById('file-input');
+            const uploadBtn = document.getElementById('upload-btn');
+            const fileInfo = document.getElementById('file-info');
+            const fileName = document.getElementById('file-name');
+            const fileSize = document.getElementById('file-size');
+            const removeFile = document.getElementById('remove-file');
+            const audioPlayerContainer = document.getElementById('audio-player-container');
+            const audioPlayer = document.getElementById('audio-player');
+            const convertBtn = document.getElementById('convert-btn');
+            const progressContainer = document.getElementById('progress-container');
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            const progressPercentage = document.getElementById('progress-percentage');
+            const processingSteps = document.getElementById('processing-steps').children;
+            const resultContainer = document.getElementById('result-container');
+            const resultText = document.getElementById('result-text');
+            const copyResult = document.getElementById('copy-result');
+            const downloadTxt = document.getElementById('download-txt');
+            const downloadDocx = document.getElementById('download-docx');
+            const newConversion = document.getElementById('new-conversion');
+            const successToast = document.getElementById('success-toast');
+            const toastMessage = document.getElementById('toast-message');
+            const faqQuestions = document.querySelectorAll('.faq-question');
+
+            // 支持的音频格式
+            const supportedFormats = ['mp3', 'wav', 'm4a', 'ogg', 'flac', 'aac', 'wma'];
+            
+            // 当前选中的文件
+            let currentFile = null;
+            
+            // 上传区域拖拽效果
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadArea.classList.add('upload-area-active');
+            });
+            
+            uploadArea.addEventListener('dragleave', function() {
+                uploadArea.classList.remove('upload-area-active');
+            });
+            
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('upload-area-active');
+                
+                // 获取拖拽的文件
+                const file = e.dataTransfer.files[0];
+                if (file) {
+                    handleFile(file);
+                }
+            });
+            
+            // 点击上传区域或上传按钮触发文件选择
+            uploadArea.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            uploadBtn.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            // 文件选择变化时处理
+            fileInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    handleFile(this.files[0]);
+                }
+            });
+            
+            // 处理选择的文件
+            function handleFile(file) {
+                // 检查文件类型
+                const fileExtension = file.name.split('.').pop().toLowerCase();
+                if (!supportedFormats.includes(fileExtension)) {
+                    showToast('不支持的文件格式，请选择MP3、WAV、M4A等音频文件', 'error');
+                    return;
+                }
+                
+                // 检查文件大小（50MB限制）
+                if (file.size > 50 * 1024 * 1024) {
+                    showToast('文件大小超过50MB限制', 'error');
+                    return;
+                }
+                
+                // 保存当前文件
+                currentFile = file;
+                
+                // 显示文件信息
+                fileName.textContent = file.name;
+                fileSize.textContent = formatFileSize(file.size);
+                
+                // 创建音频预览
+                const audioURL = URL.createObjectURL(file);
+                audioPlayer.src = audioURL;
+                audioPlayerContainer.classList.remove('hidden');
+                
+                // 显示文件信息区域
+                fileInfo.classList.remove('hidden');
+                
+                // 滚动到文件信息区域
+                fileInfo.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            
+            // 移除选中的文件
+            removeFile.addEventListener('click', function() {
+                // 清除当前文件
+                currentFile = null;
+                
+                // 重置文件输入
+                fileInput.value = '';
+                
+                // 隐藏文件信息区域
+                fileInfo.classList.add('hidden');
+                
+                // 隐藏音频播放器
+                audioPlayerContainer.classList.add('hidden');
+                audioPlayer.src = '';
+                
+                // 隐藏结果区域
+                resultContainer.classList.add('hidden');
+                
+                // 隐藏进度区域
+                progressContainer.classList.add('hidden');
+                
+                // 重置进度
+                resetProgress();
+            });
+            
+            // 开始转换
+            convertBtn.addEventListener('click', function() {
+                if (!currentFile) return;
+                
+                // 显示进度区域
+                progressContainer.classList.remove('hidden');
+                
+                // 滚动到进度区域
+                progressContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                // 开始模拟转换过程
+                startConversion();
+            });
+            
+            // 复制结果
+            copyResult.addEventListener('click', function() {
+                const textToCopy = resultText.textContent;
+                
+                navigator.clipboard.writeText(textToCopy).then(function() {
+                    showToast('文本已复制到剪贴板');
+                }).catch(function(err) {
+                    console.error('复制失败:', err);
+                    showToast('复制失败，请手动选择复制', 'error');
+                });
+            });
+            
+            // 下载TXT文件
+            downloadTxt.addEventListener('click', function() {
+                downloadFile(resultText.textContent, currentFile.name.replace(/\.[^/.]+$/, '') + '_transcript.txt', 'text/plain');
+                showToast('TXT文件下载已开始');
+            });
+            
+            // 下载DOCX文件（模拟）
+            downloadDocx.addEventListener('click', function() {
+                // 实际应用中，这里应该调用后端API生成DOCX文件
+                // 这里仅做模拟
+                showToast('DOCX文件下载功能正在开发中');
+            });
+            
+            // 开始新转换
+            newConversion.addEventListener('click', function() {
+                // 清除当前文件
+                currentFile = null;
+                
+                // 重置文件输入
+                fileInput.value = '';
+                
+                // 隐藏结果区域
+                resultContainer.classList.add('hidden');
+                
+                // 隐藏文件信息区域
+                fileInfo.classList.add('hidden');
+                
+                // 隐藏音频播放器
+                audioPlayerContainer.classList.add('hidden');
+                audioPlayer.src = '';
+                
+                // 隐藏进度区域
+                progressContainer.classList.add('hidden');
+                
+                // 重置进度
+                resetProgress();
+                
+                // 滚动到上传区域
+                uploadArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+            
+            // FAQ问答切换
+            faqQuestions.forEach(question => {
+                question.addEventListener('click', function() {
+                    const answer = this.nextElementSibling;
+                    const icon = this.querySelector('i');
+                    
+                    // 切换显示/隐藏
+                    answer.classList.toggle('hidden');
+                    
+                    // 旋转图标
+                    if (answer.classList.contains('hidden')) {
+                        icon.style.transform = 'rotate(0deg)';
+                    } else {
+                        icon.style.transform = 'rotate(180deg)';
+                    }
+                });
+            });
+            
+            // 模拟转换过程
+            function startConversion() {
+                // 重置进度
+                resetProgress();
+                
+                // 步骤1：上传文件（1-30%）
+                simulateProgress(1, 30, '上传文件中...', function() {
+                    // 步骤2：音频处理（31-50%）
+                    simulateProgress(2, 50, '音频处理中...', function() {
+                        // 步骤3：语音识别（51-80%）
+                        simulateProgress(3, 80, '语音识别中...', function() {
+                            // 步骤4：生成文本（81-100%）
+                            simulateProgress(4, 100, '生成文本中...', function() {
+                                // 转换完成，显示结果
+                                setTimeout(function() {
+                                    showResult();
+                                }, 500);
+                            });
+                        });
+                    });
+                });
+            }
+            
+            // 模拟进度更新
+            function simulateProgress(stepIndex, targetPercentage, text, callback) {
+                // 更新进度文本
+                progressText.textContent = text;
+                
+                // 标记当前步骤为活动状态
+                if (stepIndex > 0 && stepIndex <= processingSteps.length) {
+                    const step = processingSteps[stepIndex - 1];
+                    const stepNumber = step.querySelector('div');
+                    const stepText = step.querySelector('span');
+                    
+                    stepNumber.classList.remove('bg-gray-300');
+                    stepNumber.classList.add('bg-primary', 'text-white');
+                    stepText.classList.remove('text-gray-600');
+                    stepText.classList.add('text-primary', 'font-medium');
+                }
+                
+                // 当前进度
+                const currentPercentage = parseInt(progressPercentage.textContent);
+                
+                // 动画更新进度条
+                const duration = 1500; // 动画持续时间（毫秒）
+                const startTime = Date.now();
+                
+                function updateProgress() {
+                    const elapsedTime = Date.now() - startTime;
+                    const progress = Math.min(elapsedTime / duration, 1);
+                    
+                    // 计算当前应该显示的百分比
+                    const newPercentage = Math.floor(currentPercentage + (targetPercentage - currentPercentage) * progress);
+                    
+                    // 更新进度条和百分比文本
+                    progressBar.style.width = newPercentage + '%';
+                    progressPercentage.textContent = newPercentage + '%';
+                    
+                    // 如果动画未完成，继续更新
+                    if (progress < 1) {
+                        requestAnimationFrame(updateProgress);
+                    } else {
+                        // 动画完成，执行回调
+                        if (callback) callback();
+                    }
+                }
+                
+                // 开始动画
+                updateProgress();
+            }
+            
+            // 重置进度
+            function resetProgress() {
+                progressBar.style.width = '0%';
+                progressPercentage.textContent = '0%';
+                progressText.textContent = '准备中...';
+                
+                // 重置步骤状态
+                for (let i = 0; i < processingSteps.length; i++) {
+                    const stepNumber = processingSteps[i].querySelector('div');
+                    const stepText = processingSteps[i].querySelector('span');
+                    
+                    stepNumber.classList.remove('bg-primary', 'text-white');
+                    stepNumber.classList.add('bg-gray-300');
+                    stepText.classList.remove('text-primary', 'font-medium');
+                    stepText.classList.add('text-gray-600');
+                }
+            }
+            
+            // 显示转换结果
+            function showResult() {
+                // 模拟生成的文本结果
+                const mockResult = generateMockTranscript(currentFile.name);
+                
+                // 更新结果文本
+                resultText.textContent = mockResult;
+                
+                // 隐藏进度区域
+                progressContainer.classList.add('hidden');
+                
+                // 显示结果区域
+                resultContainer.classList.remove('hidden');
+                
+                // 滚动到结果区域
+                resultContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            
+            // 生成模拟的文本结果
+            function generateMockTranscript(filename) {
+                // 根据文件名或内容生成一些模拟文本
+                // 实际应用中，这里应该是从后端API获取的真实转换结果
+                
+                const mockTexts = [
+                    "这是一段音频转换后的文字内容。音频转文字技术可以帮助用户快速获取音频中的文字信息，提高工作效率。\n\n在日常工作和学习中，我们经常会遇到需要将会议录音、讲座音频、采访内容等转换为文字的情况。使用音频转文字工具可以节省大量手动记录的时间。\n\n随着人工智能技术的发展，语音识别的准确率不断提高，使得音频转文字工具的实用性越来越强。",
+                    
+                    "欢迎使用音频转文字工具。本工具支持多种音频格式，包括MP3、WAV、M4A等常见格式。\n\n使用方法非常简单：首先上传您的音频文件，然后点击开始转换按钮，等待转换完成后即可查看和下载转换结果。\n\n转换完成的文字可以保存为TXT或DOCX格式，方便您进行后续编辑和整理。",
+                    
+                    "音频转文字技术的应用场景非常广泛。在教育领域，学生可以将老师的课堂讲解转换为文字笔记；在媒体行业，记者可以快速整理采访录音；在企业环境中，员工可以将会议内容转换为文字记录。\n\n本工具使用先进的语音识别算法，能够准确识别多种语言和口音。转换过程完全在云端进行，不会占用您设备的存储空间和计算资源。"
+                ];
+                
+                // 根据文件名长度选择一个模拟文本
+                const index = filename.length % mockTexts.length;
+                return mockTexts[index];
+            }
+            
+            // 下载文件
+            function downloadFile(content, fileName, contentType) {
+                const a = document.createElement('a');
+                const file = new Blob([content], { type: contentType });
+                
+                a.href = URL.createObjectURL(file);
+                a.download = fileName;
+                document.body.appendChild(a);
+                
+                a.click();
+                
+                // 清理
+                setTimeout(function() {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(a.href);
+                }, 100);
+            }
+            
+            // 显示提示消息
+            function showToast(message, type = 'success') {
+                toastMessage.textContent = message;
+                
+                // 设置颜色
+                if (type === 'error') {
+                    successToast.classList.remove('bg-green-500');
+                    successToast.classList.add('bg-red-500');
+                } else {
+                    successToast.classList.remove('bg-red-500');
+                    successToast.classList.add('bg-green-500');
+                }
+                
+                // 显示提示
+                successToast.classList.remove('translate-y-20', 'opacity-0');
+                
+                // 3秒后隐藏
+                setTimeout(function() {
+                    successToast.classList.add('translate-y-20', 'opacity-0');
+                }, 3000);
+            }
+            
+            // 格式化文件大小
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+            
+            // 添加页面滚动动画
+            gsap.from('header', { duration: 1, y: -50, opacity: 0, ease: 'power3.out' });
+            gsap.from('section h2', { duration: 0.8, y: 30, opacity: 0, stagger: 0.2, scrollTrigger: { trigger: 'section', start: 'top 80%' } });
+            gsap.from('.bg-white', { duration: 0.6, y: 20, opacity: 0, stagger: 0.1, scrollTrigger: { trigger: '.bg-white', start: 'top 85%' } });
+        });
+    </script>
+</body>
+</html>
