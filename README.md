@@ -1,2 +1,2 @@
 # ai
-ai
+ai.github.io
